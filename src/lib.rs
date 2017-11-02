@@ -146,7 +146,8 @@ pub unsafe extern "C" fn error_message(buffer: *mut c_char, length: c_int) -> c_
 ///       something.unwrap()
 ///   });
 ///
-///   println!("{:?}", got);
+///   let message = format!("{:?}", got);
+///   assert_eq!(message, r#"Err(Message("called `Option::unwrap()` on a `None` value"))"#);
 /// }
 ///
 /// #[derive(Debug)]
