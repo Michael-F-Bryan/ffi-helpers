@@ -1,10 +1,10 @@
-# FFI Errors
+# FFI Helpers
 
-A crate exposing common functions for doing proper error handling in a FFI 
-context. 
+A crate exposing common functions helpers for doing proper error handling in a 
+FFI context. 
 
 
-## Theory
+## Error Handling Theory
 
 This employs a thread-local variable which holds the most recent error as
 well as some convenience functions for getting/clearing this variable. 

@@ -1,7 +1,8 @@
-//! A crate exposing common functions for doing proper error handling in a FFI
-//! context.
+//! A crate exposing common functions helpers for doing proper error handling in a
+//! FFI context.
 //!
-//! ## Theory
+//!
+//! ## Error Handling Theory
 //!
 //! This employs a thread-local variable which holds the most recent error as
 //! well as some convenience functions for getting/clearing this variable.
@@ -24,6 +25,8 @@ use std::error::Error;
 use std::cell::RefCell;
 use std::ptr;
 use std::slice;
+use std::panic::{self, UnwindSafe};
+use std::any::Any;
 use libc::{c_char, c_int};
 
 
@@ -32,8 +35,8 @@ thread_local!(
 );
 
 /// Set the thread-local `LAST_ERROR` variable.
-pub fn update_last_error<E: Error + 'static>(e: E) {
-    let boxed = Box::new(e);
+pub fn update_last_error<E: Into<Box<Error>> + 'static>(e: E) {
+    let boxed = e.into();
 
     LAST_ERROR.with(|last| {
         *last.borrow_mut() = Some(boxed);
@@ -46,8 +49,19 @@ pub fn get_last_error() -> Option<Box<Error>> {
 }
 
 
+/// Write the latest error message to a buffer.
+///
+/// # Returns
+///
+/// This returns the number of bytes written to the buffer. If no bytes were
+/// written (i.e. there is no last error) then it returns `0`. If the buffer
+/// isn't big enough or a `null` pointer was passed in, you'll get a `-1`.
 #[no_mangle]
 pub unsafe extern "C" fn error_message(buffer: *mut c_char, length: c_int) -> c_int {
+    if buffer.is_null() {
+        return -1;
+    }
+
     let buffer = slice::from_raw_parts_mut(buffer as *mut u8, length as usize);
 
     // Take the last error, if there isn't one then there's no error message to
@@ -61,6 +75,9 @@ pub unsafe extern "C" fn error_message(buffer: *mut c_char, length: c_int) -> c_
     let bytes_required = error_message.len() + 1;
 
     if buffer.len() < bytes_required {
+        // We don't have enough room. Make sure to return the error so it
+        // isn't accidentally consumed
+        update_last_error(err);
         return -1;
     }
 
@@ -72,4 +89,45 @@ pub unsafe extern "C" fn error_message(buffer: *mut c_char, length: c_int) -> c_
     ptr::write_bytes(rest.as_mut_ptr(), 0, rest.len());
 
     data.len() as c_int
+}
+
+/// Execute some closure, catching any panics and converting them into errors
+/// so you don't accidentally unwind across the FFI boundary.
+///
+/// # Note
+///
+/// It will need to be possible to convert an opaque `Box<Any + Send + 'static>`
+/// received from [`std::panic::catch_unwind()`][cu] back into your error type.
+///
+/// If you are using [error-chain] then you can leverage the `error_chain!()`
+/// macro to generate this for you.
+///
+/// ```ignore
+/// error_chain! {
+///   errors {
+///     Panic(inner: Box<::std::any::Any + Send + 'static>) {
+///       description("Thread Panicked")
+///       display("{}",
+///         if let Some(s) = inner.downcast::<String>() {
+///           s
+///         }) else if let Some(s) = inner.downcast::<str>() {
+///           s.to_string()
+///         } else {
+///           String::from("Thread Panicked")
+///         }
+///     }
+///   }
+/// }
+/// ```
+///
+/// [cu]: https://doc.rust-lang.org/std/panic/fn.catch_unwind.html
+/// [error-chain]: https://crates.io/crates/error-chain
+pub fn catch_panic<T, E, F>(func: F) -> Result<T, E>
+where
+    F: FnOnce() -> Result<T, E> + UnwindSafe,
+    E: From<Box<Any + Send + 'static>>,
+{
+    panic::catch_unwind(func)
+        .map_err(Into::into)
+        .and_then(|t| t)
 }
