@@ -1,0 +1,7 @@
+[package]
+name = "ffi-errors"
+version = "0.1.0"
+authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
+description = "A crate exposing common functions for doing proper error handling in a FFI context."
+
+[dependencies]
