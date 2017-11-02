@@ -100,21 +100,69 @@ pub unsafe extern "C" fn error_message(buffer: *mut c_char, length: c_int) -> c_
 /// received from [`std::panic::catch_unwind()`][cu] back into your error type.
 ///
 /// If you are using [error-chain] then you can leverage the `error_chain!()`
-/// macro to generate this for you.
+/// macro to generate some of this for you.
 ///
 /// ```ignore
-/// error_chain! {
-///   errors {
-///     Panic(inner: Box<::std::any::Any + Send + 'static>) {
-///       description("Thread Panicked")
-///       display("{}",
-///         if let Some(s) = inner.downcast::<String>() {
-///           s
-///         }) else if let Some(s) = inner.downcast::<str>() {
-///           s.to_string()
-///         } else {
-///           String::from("Thread Panicked")
+/// error_chain!{
+///     ...
+///     errors {
+///         Panic(inner: Box<::std::any::Any + Send + 'static>) {
+///             description("Thread Panicked")
+///                 display("{}",
+///                         if let Some(s) = inner.downcast_ref::<String>() {
+///                             s.clone()
+///                         } else if let Some(s) = inner.downcast_ref::<&str>() {
+///                             s.to_string()
+///                         } else {
+///                             String::from("Thread Panicked")
+///                         })
 ///         }
+///     }
+/// }
+/// }
+/// ```
+///
+/// When converting from a `Box<Any + Send + 'static>`, the best way to try and
+/// recover the panic message is to use `Any::downcast_ref()` to try various
+/// "common" panic message types. Falling back to some sane default if we can't
+/// figure it out. Luckily almost all panic messages are either `&str` or
+/// `String`.
+///
+///
+/// # Examples
+///
+/// This is a basic example of how you may use `catch_panic()`. It looks a
+/// little long because you need to define a way to convert a panic message into
+/// your error type, but that's a one-time cost and the `catch_panic()` call
+/// itself is trivial.
+///
+/// ```
+/// use std::any::Any;
+/// extern crate ffi_helpers;
+///
+/// fn main() {
+///   let got: Result<u32, Error> = ffi_helpers::catch_panic(|| {
+///       let something  = None;
+///       something.unwrap()
+///   });
+///
+///   println!("{:?}", got);
+/// }
+///
+/// #[derive(Debug)]
+/// enum Error {
+///   Message(String),
+///   Unknown,
+/// }
+///
+/// impl From<Box<Any + Send + 'static>> for Error {
+///   fn from(other: Box<Any + Send + 'static>) -> Error {
+///     if let Some(owned) = other.downcast_ref::<String>() {
+///       Error::Message(owned.clone())
+///     } else if let Some(owned) = other.downcast_ref::<String>() {
+///       Error::Message(owned.to_string())
+///     } else {
+///       Error::Unknown
 ///     }
 ///   }
 /// }

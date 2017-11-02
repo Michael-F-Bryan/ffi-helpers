@@ -1,9 +1,8 @@
 [package]
 authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
 description = "A crate exposing common functions for doing proper error handling in a FFI context."
-name = "ffi-errors"
+name = "ffi-helpers"
 version = "0.1.0"
 
 [dependencies]
-lazy_static = "0.2.9"
 libc = "0.2.33"
