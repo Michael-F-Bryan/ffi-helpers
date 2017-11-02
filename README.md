@@ -1,5 +1,7 @@
 # FFI Helpers
 
+[![Build Status](https://travis-ci.org/Michael-F-Bryan/ffi-helpers.svg?branch=master)](https://travis-ci.org/Michael-F-Bryan/ffi-helpers)
+
 A crate exposing common functions helpers for doing proper error handling in a 
 FFI context. 
 
@@ -19,4 +21,4 @@ operations must update the most recent error if they fail.
 > error handling docs, ported to Rust. As such, it is **strongly recommended** 
 > to skim the [error handling docs][docs] themselves.
 
-[docs]: https://github.com/libgit2/libgit2/blob/master/docs/error-handling.md)
+[docs]: https://github.com/libgit2/libgit2/blob/master/docs/error-handling.md

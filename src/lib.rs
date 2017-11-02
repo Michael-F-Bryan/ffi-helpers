@@ -13,11 +13,12 @@
 //! most recent error for more information... Of course that means all fallible
 //! operations must update the most recent error if they fail.
 //!
-//! > **Note:** This error handling strategy is strongly influenced by libgit2]'s
+//! > **Note:** This error handling strategy is strongly influenced by [libgit2]'s
 //! > error handling docs, ported to Rust. As such, it is **strongly recommended**
 //! > to skim the [error handling docs][docs] themselves.
 //!
-//! [docs]: https://github.com/libgit2/libgit2/blob/master/docs/error-handling.md)
+//! [docs]: https://github.com/libgit2/libgit2/blob/master/docs/error-handling.md
+//! [libgit2]: https://github.com/libgit2/libgit2
 
 extern crate libc;
 
